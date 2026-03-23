@@ -1,5 +1,6 @@
 import pytest
-from src.models import Product, Category
+
+from src.models import Category, Product
 
 
 def test_product_initialization():
@@ -9,7 +10,9 @@ def test_product_initialization():
 
     # Проверяем корректность инициализации
     assert product.name == "Тест продукт", "Название продукта должно соответствовать"
-    assert product.description == "Тестовое описание", "Описание продукта должно соответствовать"
+    assert (
+        product.description == "Тестовое описание"
+    ), "Описание продукта должно соответствовать"
     assert product.price == 1000.0, "Цена продукта должна соответствовать"
     assert product.quantity == 10, "Количество продукта должно соответствовать"
 
@@ -25,14 +28,26 @@ def test_category_initialization():
     product2 = Product("Продукт 2", "Описание 2", 200.0, 3)
 
     # Создаем тестовую категорию
-    category = Category("Тест категория", "Тестовое описание категории", [product1, product2])
+    category = Category(
+        "Тест категория", "Тестовое описание категории", [product1, product2]
+    )
 
     # Проверяем корректность инициализации
-    assert category.name == "Тест категория", "Название категории должно соответствовать"
-    assert category.description == "Тестовое описание категории", "Описание категории должно соответствовать"
-    assert len(category.products) == 2, "Количество продуктов в категории должно соответствовать"
-    assert category.products[0].name == "Продукт 1", "Первый продукт в категории должен быть корректным"
-    assert category.products[1].name == "Продукт 2", "Второй продукт в категории должен быть корректным"
+    assert (
+        category.name == "Тест категория"
+    ), "Название категории должно соответствовать"
+    assert (
+        category.description == "Тестовое описание категории"
+    ), "Описание категории должно соответствовать"
+    assert (
+        len(category.products) == 2
+    ), "Количество продуктов в категории должно соответствовать"
+    assert (
+        category.products[0].name == "Продукт 1"
+    ), "Первый продукт в категории должен быть корректным"
+    assert (
+        category.products[1].name == "Продукт 2"
+    ), "Второй продукт в категории должен быть корректным"
 
 
 def test_category_count():
@@ -47,12 +62,16 @@ def test_category_count():
     # Создаем первую категорию
     product1 = Product("Продукт 1", "Описание 1", 100.0, 1)
     category1 = Category("Категория 1", "Описание 1", [product1])
-    assert Category.category_count == 1, "После создания первой категории счетчик должен быть 1"
+    assert (
+        Category.category_count == 1
+    ), "После создания первой категории счетчик должен быть 1"
 
     # Создаем вторую категорию
     product2 = Product("Продукт 2", "Описание 2", 200.0, 2)
     category2 = Category("Категория 2", "Описание 2", [product2])
-    assert Category.category_count == 2, "После создания второй категории счетчик должен быть 2"
+    assert (
+        Category.category_count == 2
+    ), "После создания второй категории счетчик должен быть 2"
 
 
 def test_product_count():
@@ -68,12 +87,16 @@ def test_product_count():
     product1 = Product("Продукт 1", "Описание 1", 100.0, 1)
     product2 = Product("Продукт 2", "Описание 2", 200.0, 2)
     category1 = Category("Категория 1", "Описание 1", [product1, product2])
-    assert Category.product_count == 2, "После создания категории с 2 товарами счетчик должен быть 2"
+    assert (
+        Category.product_count == 2
+    ), "После создания категории с 2 товарами счетчик должен быть 2"
 
     # Создаем вторую категорию с 1 товаром
     product3 = Product("Продукт 3", "Описание 3", 300.0, 3)
     category2 = Category("Категория 2", "Описание 2", [product3])
-    assert Category.product_count == 3, "После создания второй категории с 1 товаром счетчик должен быть 3"
+    assert (
+        Category.product_count == 3
+    ), "После создания второй категории с 1 товаром счетчик должен быть 3"
 
 
 def test_category_attributes_access():
@@ -90,10 +113,18 @@ def test_category_attributes_access():
     category2 = Category("Категория 2", "Описание 2", [product2])
 
     # Проверяем доступ к атрибутам класса через экземпляры
-    assert category1.category_count == 2, "Атрибут класса должен быть доступен через экземпляр"
-    assert category1.product_count == 2, "Атрибут класса должен быть доступен через экземпляр"
-    assert category2.category_count == 2, "Атрибут класса должен быть доступен через экземпляр"
-    assert category2.product_count == 2, "Атрибут класса должен быть доступен через экземпляр"
+    assert (
+        category1.category_count == 2
+    ), "Атрибут класса должен быть доступен через экземпляр"
+    assert (
+        category1.product_count == 2
+    ), "Атрибут класса должен быть доступен через экземпляр"
+    assert (
+        category2.category_count == 2
+    ), "Атрибут класса должен быть доступен через экземпляр"
+    assert (
+        category2.product_count == 2
+    ), "Атрибут класса должен быть доступен через экземпляр"
 
 
 @pytest.fixture
@@ -102,7 +133,7 @@ def sample_products():
     return [
         Product("Телефон", "Смартфон", 50000.0, 10),
         Product("Ноутбук", "Игровой", 100000.0, 5),
-        Product("Наушники", "Беспроводные", 10000.0, 20)
+        Product("Наушники", "Беспроводные", 10000.0, 20),
     ]
 
 
