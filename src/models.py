@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Iterable, Iterator, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 
 class Product:
@@ -17,7 +17,6 @@ class Product:
 
     def __str__(self) -> str:
         """
-        Строковое представление:
         "Название продукта, 80 руб. Остаток: 15 шт."
         """
         price_display = (
@@ -66,13 +65,16 @@ class Product:
 
     def __add__(self, other: Union["Product", int, float]) -> float:
         """
-        Сложение двух продуктов возвращает суммарную стоимость:
-        a + b == a.total_value + b.total_value
-
-        Также поддерживается сложение с числом (будет суммирование стоимости и числа).
+        Складывать можно:
+        - Product + Product (только одинакового класса) -> сумма total_value
+        - Product + число -> total_value + число
+        В противном случае — TypeError или NotImplemented.
         """
         if isinstance(other, Product):
-            return self.total_value + other.total_value
+            # разрешаем сложение только если оба ровно одного класса
+            if type(self) is type(other):
+                return self.total_value + other.total_value
+            raise TypeError("Нельзя складывать продукты разных типов")
         if isinstance(other, (int, float)):
             return self.total_value + other
         return NotImplemented
@@ -80,11 +82,12 @@ class Product:
     def __radd__(self, other: Union[int, float, "Product"]) -> float:
         """
         Обратное сложение, чтобы поддерживать sum(products, 0).
-        Если other == 0 (int), вернётся self.total_value.
+        При other == Product — проверяем типы аналогично __add__.
         """
-        # other может быть Product (редко для __radd__), либо число
         if isinstance(other, Product):
-            return other.total_value + self.total_value
+            if type(self) is type(other):
+                return other.total_value + self.total_value
+            raise TypeError("Нельзя складывать продукты разных типов")
         if isinstance(other, (int, float)):
             return other + self.total_value
         return NotImplemented
@@ -93,6 +96,11 @@ class Product:
     def new_product(
         cls, data: Dict[str, object], existing_products: Optional[Iterable["Product"]] = None
     ) -> "Product":
+        """
+        Создаёт продукт из словаря. При наличии existing_products — ищет
+        продукт с тем же именем и тем же классом (type == cls), если найден —
+        суммирует quantity и обновляет цену (берёт максимальную).
+        """
         name = str(data.get("name", "")).strip()
         description = str(data.get("description", "")).strip()
         try:
@@ -106,14 +114,59 @@ class Product:
 
         if existing_products:
             for prod in existing_products:
-                if prod.name.strip().lower() == name.lower():
+                if prod.name.strip().lower() == name.lower() and type(prod) is cls:
                     prod.quantity += quantity
-                    # при конфликте цен выбираем более высокую
                     higher_price = max(prod.price, price)
                     prod.price = higher_price
                     return prod
 
         return cls(name=name, description=description, price=price, quantity=quantity)
+
+
+class Smartphone(Product):
+    """
+    Наследник Product для смартфонов.
+    Дополнительные атрибуты: efficiency, model, memory, color
+    """
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        efficiency: Optional[float] = None,
+        model: Optional[str] = None,
+        memory: Optional[int] = None,
+        color: Optional[str] = None,
+    ):
+        super().__init__(name, description, price, quantity)
+        self.efficiency = efficiency
+        self.model = model
+        self.memory = memory
+        self.color = color
+
+
+class LawnGrass(Product):
+    """
+    Наследник Product для травы газонной.
+    Дополнительные атрибуты: country, germination_period, color
+    """
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        price: float,
+        quantity: int,
+        country: Optional[str] = None,
+        germination_period: Optional[int] = None,
+        color: Optional[str] = None,
+    ):
+        super().__init__(name, description, price, quantity)
+        self.country = country
+        self.germination_period = germination_period
+        self.color = color
 
 
 class Category:
@@ -133,23 +186,23 @@ class Category:
                 self.add_product(p)
 
     def add_product(self, product: Product) -> None:
+        """
+        Добавляет продукт в категорию. Разрешено только добавление объектов класса
+        Product или его наследников. В противном случае — TypeError.
+        """
         if not isinstance(product, Product):
-            raise TypeError("add_product ожидает объект Product")
+            raise TypeError("Можно добавлять только объекты Product или его наследников")
         self.__products.append(product)
         Category.product_count += 1
 
     @property
     def products(self) -> List[Product]:
-        """
-        Возвращает копию списка Product-ов.
-        """
+        """Возвращает копию списка продуктов (для безопасного чтения)."""
         return list(self.__products)
 
     @property
     def products_str(self) -> str:
-        """
-        Возвращает список товаров как многострочную строку, используя __str__ для каждого продукта.
-        """
+        """Многострочная строка со списком продуктов (использует __str__ каждого продукта)."""
         if not self.__products:
             return "Категория пуста."
         return "\n".join(str(p) for p in self.__products)
@@ -159,11 +212,7 @@ class Category:
         return sum(int(p.quantity) for p in self.__products)
 
     def __str__(self) -> str:
-        """
-        Строковое представление категории:
-        "Название категории, количество продуктов: 200 шт."
-        Количество — это сумма quantity всех продуктов в категории.
-        """
+        """"Название категории, количество продуктов: 200 шт." (сумма quantity всех продуктов)."""
         return f"{self.name}, количество продуктов: {self.total_quantity()} шт."
 
     def _get_products_list(self) -> List[Product]:
@@ -176,25 +225,19 @@ class Category:
 
 
 class CategoryIterator:
-    """
-    Вспомогательный итератор для перебора товаров одной категории.
-    Использование:
-        it = CategoryIterator(category)
-        for prod in it: ...
-    """
+    """Итератор для перебора товаров одной категории."""
 
     def __init__(self, category: Category):
         if not isinstance(category, Category):
             raise TypeError("CategoryIterator ожидает объект Category")
-        self._category = category
+        self._products = category.products  # копия списка
         self._index = 0
-        self._products = category.products  # уже копия
 
-    def __iter__(self) -> "CategoryIterator":
+    def __iter__(self):
         self._index = 0
         return self
 
-    def __next__(self) -> Product:
+    def __next__(self):
         if self._index >= len(self._products):
             raise StopIteration
         item = self._products[self._index]

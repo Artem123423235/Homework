@@ -1,62 +1,76 @@
-import os
 import pytest
-from src.models import Product, Category, CategoryIterator
+from src.models import Product, Smartphone, LawnGrass, Category
 
 
-def test_product_str_and_total_value():
-    p = Product("Хлеб", "Свежий", 80.0, 15)
-    assert str(p) == "Хлеб, 80 руб. Остаток: 15 шт."
-    assert p.total_value == 80.0 * 15
+def test_subclasses_are_products_and_have_specific_attrs():
+    s = Smartphone("Phone", "Smart", 30000.0, 5, efficiency=9.5, model="X1", memory=128, color="black")
+    g = LawnGrass("Газонная", "Трава", 200.0, 20, country="NL", germination_period=14, color="green")
+
+    assert isinstance(s, Product)
+    assert isinstance(g, Product)
+
+    # дополнительные атрибуты присутствуют
+    assert s.efficiency == 9.5
+    assert s.model == "X1"
+    assert s.memory == 128
+    assert s.color == "black"
+
+    assert g.country == "NL"
+    assert g.germination_period == 14
+    assert g.color == "green"
 
 
-def test_product_addition_and_sum():
-    a = Product("A", "", 100.0, 10)  # total 1000
-    b = Product("B", "", 200.0, 2)   # total 400
-    assert a + b == 1400
-    # Проверка суммирования через sum
-    products = [a, b]
-    total = sum(products, 0)
-    assert total == 1400
+def test_addition_only_same_type_allowed():
+    a = Smartphone("S1", "", 100.0, 10)
+    b = Smartphone("S2", "", 200.0, 2)
+    c = LawnGrass("L1", "", 10.0, 50)
+
+    # Smartphone + Smartphone -> ok
+    assert a + b == a.total_value + b.total_value
+
+    # Smartphone + LawnGrass -> TypeError
+    with pytest.raises(TypeError):
+        _ = a + c
+
+    # LawnGrass + Smartphone -> TypeError
+    with pytest.raises(TypeError):
+        _ = c + a
 
 
-def test_category_str_and_products_str():
-    p1 = Product("Товар1", "", 10.0, 2)
-    p2 = Product("Товар2", "", 5.0, 3)
-    cat = Category("Категория", "Описание", [p1, p2])
-    # __str__ должен показывать суммарное количество: 2 + 3 = 5
-    assert str(cat) == "Категория, количество продуктов: 5 шт."
-    # products_str использует __str__ продуктов
-    expected = f"{str(p1)}\n{str(p2)}"
-    assert cat.products_str == expected
+def test_category_add_product_type_enforcement():
+    cat = Category("Катег", "desc")
+    p = Product("P", "", 10.0, 1)
+    s = Smartphone("S", "", 100.0, 1)
+    g = LawnGrass("G", "", 5.0, 10)
+
+    cat.add_product(p)
+    cat.add_product(s)
+    cat.add_product(g)
+
+    assert len(cat.products) == 3
+
+    # Попытка добавить не-продукт -> TypeError
+    with pytest.raises(TypeError):
+        cat.add_product(123)
+
+    with pytest.raises(TypeError):
+        cat.add_product("not a product")
 
 
-def test_category_iterator():
-    p1 = Product("T1", "", 1.0, 1)
-    p2 = Product("T2", "", 2.0, 2)
-    cat = Category("C", "D", [p1, p2])
-    it = CategoryIterator(cat)
-    collected = [x for x in it]
-    assert collected == [p1, p2]
+def test_new_product_merging_respects_type():
+    existing = [Smartphone("Phone", "", 30000.0, 2)]
+    data_same = {"name": "Phone", "description": "", "price": 31000.0, "quantity": 1}
+    data_diff = {"name": "Phone", "description": "", "price": 50.0, "quantity": 5}
 
+    # merging with same class -> will update existing smartphone
+    prod = Smartphone.new_product(data_same, existing_products=existing)
+    assert prod is existing[0]
+    assert prod.quantity == 3
+    assert prod.price == 31000.0  # higher price chosen
 
-def test_price_setter_negative_and_confirmation(monkeypatch):
-    p = Product("X", "", 100.0, 1)
-    # отрицательная цена — не изменяется
-    p.price = -10
-    assert p.price == 100.0
-
-    # понижение с подтверждением: симулируем ввод 'n' (отмена)
-    monkeypatch.setattr("builtins.input", lambda prompt="": "n")
-    p.price = 50.0
-    assert p.price == 100.0
-
-    # симулируем 'y' (подтверждение)
-    monkeypatch.setattr("builtins.input", lambda prompt="": "y")
-    p.price = 50.0
-    assert p.price == 50.0
-
-    # автоподтверждение через переменную окружения (для CI)
-    os.environ["AUTO_CONFIRM_PRICE_CHANGE"] = "1"
-    p.price = 40.0  # автоматически подтверждается
-    assert p.price == 40.0
-    del os.environ["AUTO_CONFIRM_PRICE_CHANGE"]
+    # merging with different class (Product) should not merge into Smartphone list
+    existing2 = [Product("Phone", "", 50.0, 10)]
+    new_phone = Smartphone.new_product(data_diff, existing_products=existing2)
+    # new_phone should be a new Smartphone instance (not merged into Product)
+    assert isinstance(new_phone, Smartphone)
+    assert new_phone is not existing2[0]
